@@ -1,0 +1,29 @@
+{
+  "name": "jev-qa-demos",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Jev (TypeSafe AI) demos for QA / SDET engineers, via Vercel AI Gateway",
+  "scripts": {
+    "demo:hello": "tsx src/01-hello-noul.ts",
+    "demo:triage": "tsx src/02-triage.ts",
+    "demo:guardrail": "tsx src/03-guardrail.ts",
+    "demo:break": "tsx src/04-break-it.ts",
+    "demo:all": "npm run demo:hello && npm run demo:triage && npm run demo:guardrail && npm test && npm run demo:break",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ai": "7.0.105",
+    "dotenv": "16.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.3",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
+  },
+  "overrides": {
+    "rollup": "4.63.3"
+  }
+}

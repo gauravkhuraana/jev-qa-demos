@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+
+# Local npm registry config (corporate feed, keep out of the public repo)
+.npmrc
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Test / coverage
+coverage/
+.vitest/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Caches
+.cache/
+.eslintcache
+.npm/
+
+# Editor / IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
