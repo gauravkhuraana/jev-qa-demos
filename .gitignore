@@ -15,6 +15,12 @@ build/
 out/
 *.tsbuildinfo
 
+# Local Video 3 / Ollama materials
+/src/05-local-ollama.ts
+/api/ollama/
+/api/jev-ollama.postman_collection.json
+/docs/video3-*
+
 # Test / coverage
 coverage/
 .vitest/
