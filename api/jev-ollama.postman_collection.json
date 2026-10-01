@@ -1,0 +1,533 @@
+{
+  "info": {
+    "name": "Jev-style decision models · Local with Ollama",
+    "description": "Decision models running locally on Ollama (0.35+). No API key, no auth.\n\nSetup: ollama pull tev1:0.8b\n\nPOST {{baseUrl}}/v1/systemone with { model, state, questions }. Question types: choice, noul (yes/no), score.\n\nSwitch the `model` variable to tev1 or nimble to compare.\n\nSource: https://ollama.com/blog/ollama-now-supports-jev-style-decision-models",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:11434"
+    },
+    {
+      "key": "model",
+      "value": "tev1:0.8b"
+    }
+  ],
+  "item": [
+    {
+      "name": "0 · Is Ollama running?",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/version",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "version"
+          ]
+        },
+        "description": "Should return {\"version\":\"0.35.x\"} or newer."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Ollama is up', () => pm.response.to.have.status(200));",
+              "const [maj, min] = pm.response.json().version.split('.').map(Number);",
+              "pm.test('Version 0.35+ (has /v1/systemone)', () => pm.expect(maj > 0 || min >= 35).to.be.true);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "1 · Ollama blog example (support ticket)",
+      "item": [
+        {
+          "name": "Ticket: team / refund / urgency",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const a = pm.response.json().answers;",
+                  "pm.test('Routed to billing', () => pm.expect(a.team.choice).to.eql('billing'));",
+                  "pm.test('Refund asked (noul > 0.5)', () => pm.expect(a.refund.noul).to.be.above(0.5));",
+                  "pm.test('Fast enough (< 3 s)', () => pm.expect(pm.response.responseTime).to.be.below(3000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"{{model}}\",\n  \"state\": {\n    \"ticket\": \"I was charged twice. Please refund the extra payment.\"\n  },\n  \"questions\": {\n    \"team\": {\n      \"type\": \"choice\",\n      \"instructions\": \"Which team should handle this ticket?\",\n      \"criteria\": {\n        \"billing\": \"Payments and refunds\",\n        \"technical\": \"Bugs and integrations\",\n        \"other\": \"None of the above\"\n      }\n    },\n    \"refund\": {\n      \"type\": \"noul\",\n      \"instructions\": \"Does the customer explicitly ask for a refund?\"\n    },\n    \"urgency\": {\n      \"type\": \"score\",\n      \"instructions\": \"How urgent is this ticket?\",\n      \"criteria\": [\n        \"Routine\",\n        \"Soon\",\n        \"Urgent\"\n      ]\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/systemone",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "systemone"
+              ]
+            },
+            "description": "Ollama's own example, unchanged except the model. Expected: team = billing, refund noul close to 1."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 · Hello Noul (Part 1 recap)",
+      "item": [
+        {
+          "name": "Hello Noul: one yes/no question",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const a = pm.response.json().answers;",
+                  "pm.test('Assertion failure detected', () => pm.expect(a.isAssertionFailure.noul).to.be.above(0.5));",
+                  "pm.test('Fast enough (< 3 s)', () => pm.expect(pm.response.responseTime).to.be.below(3000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"{{model}}\",\n  \"state\": \"Test \\\"checkout applies coupon\\\" failed: expected total 900, received 1000.\",\n  \"questions\": {\n    \"isAssertionFailure\": {\n      \"type\": \"noul\",\n      \"instructions\": \"Did the test fail because an assertion did not match the expected value?\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/systemone",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "systemone"
+              ]
+            },
+            "description": "Same state as Part 1, now local. Expected: noul close to 1."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 · Triage failed tests (Part 2 recap)",
+      "item": [
+        {
+          "name": "T01 · checkout (truth: product_bug)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const a = pm.response.json().answers;",
+                  "pm.test('Category matches truth (product_bug)', () => pm.expect(a.category.choice).to.eql('product_bug'));",
+                  "console.log(a.category.choice, a.category.probabilities, 'confidence', a.category.confidence, 'retry', a.retryWillPass.noul);",
+                  "pm.test('Fast enough (< 3 s)', () => pm.expect(pm.response.responseTime).to.be.below(3000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"{{model}}\",\n  \"state\": {\n    \"test\": \"checkout › applies 10% coupon to cart total\",\n    \"error\": \"AssertionError: expected 900 but received 1000. Coupon SAVE10 accepted (HTTP 200) but total unchanged.\",\n    \"last10Runs\": \"PPPPPPPPPF\"\n  },\n  \"questions\": {\n    \"category\": {\n      \"type\": \"choice\",\n      \"instructions\": \"What is the most likely root cause of this test failure?\",\n      \"criteria\": {\n        \"product_bug\": \"The application under test behaves incorrectly (wrong result, server error, broken feature).\",\n        \"test_bug\": \"The test itself is wrong or outdated (stale locator, outdated expected value, spec changed).\",\n        \"environment\": \"Infrastructure problem outside the app and test (DB down, DNS, network, missing service).\",\n        \"flaky\": \"Timing or race condition; the same test intermittently passes and fails, often passes on retry.\"\n      }\n    },\n    \"releaseImpact\": {\n      \"type\": \"score\",\n      \"instructions\": \"If this is a real defect, how much does it impact the release?\",\n      \"criteria\": [\n        \"No user impact\",\n        \"Minor issue with an easy workaround\",\n        \"Important feature degraded\",\n        \"Critical user journey broken; blocks the release\"\n      ]\n    },\n    \"retryWillPass\": {\n      \"type\": \"noul\",\n      \"instructions\": \"Would simply re-running this test, with no code changes, most likely make it pass?\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/systemone",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "systemone"
+              ]
+            },
+            "description": "Truth label: product_bug. A red test here = the local model disagrees with the human label."
+          }
+        },
+        {
+          "name": "T02 · login (truth: flaky)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const a = pm.response.json().answers;",
+                  "pm.test('Category matches truth (flaky)', () => pm.expect(a.category.choice).to.eql('flaky'));",
+                  "console.log(a.category.choice, a.category.probabilities, 'confidence', a.category.confidence, 'retry', a.retryWillPass.noul);",
+                  "pm.test('Fast enough (< 3 s)', () => pm.expect(pm.response.responseTime).to.be.below(3000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"{{model}}\",\n  \"state\": {\n    \"test\": \"login › shows dashboard after valid login\",\n    \"error\": \"TimeoutError: page.waitForSelector: Timeout 5000ms exceeded waiting for '#dashboard'. Passed on retry 1.\",\n    \"last10Runs\": \"PFPPFPPPFP\"\n  },\n  \"questions\": {\n    \"category\": {\n      \"type\": \"choice\",\n      \"instructions\": \"What is the most likely root cause of this test failure?\",\n      \"criteria\": {\n        \"product_bug\": \"The application under test behaves incorrectly (wrong result, server error, broken feature).\",\n        \"test_bug\": \"The test itself is wrong or outdated (stale locator, outdated expected value, spec changed).\",\n        \"environment\": \"Infrastructure problem outside the app and test (DB down, DNS, network, missing service).\",\n        \"flaky\": \"Timing or race condition; the same test intermittently passes and fails, often passes on retry.\"\n      }\n    },\n    \"releaseImpact\": {\n      \"type\": \"score\",\n      \"instructions\": \"If this is a real defect, how much does it impact the release?\",\n      \"criteria\": [\n        \"No user impact\",\n        \"Minor issue with an easy workaround\",\n        \"Important feature degraded\",\n        \"Critical user journey broken; blocks the release\"\n      ]\n    },\n    \"retryWillPass\": {\n      \"type\": \"noul\",\n      \"instructions\": \"Would simply re-running this test, with no code changes, most likely make it pass?\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/systemone",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "systemone"
+              ]
+            },
+            "description": "Truth label: flaky. A red test here = the local model disagrees with the human label."
+          }
+        },
+        {
+          "name": "T03 · orders (truth: environment)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const a = pm.response.json().answers;",
+                  "pm.test('Category matches truth (environment)', () => pm.expect(a.category.choice).to.eql('environment'));",
+                  "console.log(a.category.choice, a.category.probabilities, 'confidence', a.category.confidence, 'retry', a.retryWillPass.noul);",
+                  "pm.test('Fast enough (< 3 s)', () => pm.expect(pm.response.responseTime).to.be.below(3000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"{{model}}\",\n  \"state\": {\n    \"test\": \"orders › lists last 5 orders\",\n    \"error\": \"Error: connect ECONNREFUSED 10.0.4.12:5432 — could not connect to postgres (orders-db-staging).\",\n    \"last10Runs\": \"PPPPPPPPPF\"\n  },\n  \"questions\": {\n    \"category\": {\n      \"type\": \"choice\",\n      \"instructions\": \"What is the most likely root cause of this test failure?\",\n      \"criteria\": {\n        \"product_bug\": \"The application under test behaves incorrectly (wrong result, server error, broken feature).\",\n        \"test_bug\": \"The test itself is wrong or outdated (stale locator, outdated expected value, spec changed).\",\n        \"environment\": \"Infrastructure problem outside the app and test (DB down, DNS, network, missing service).\",\n        \"flaky\": \"Timing or race condition; the same test intermittently passes and fails, often passes on retry.\"\n      }\n    },\n    \"releaseImpact\": {\n      \"type\": \"score\",\n      \"instructions\": \"If this is a real defect, how much does it impact the release?\",\n      \"criteria\": [\n        \"No user impact\",\n        \"Minor issue with an easy workaround\",\n        \"Important feature degraded\",\n        \"Critical user journey broken; blocks the release\"\n      ]\n    },\n    \"retryWillPass\": {\n      \"type\": \"noul\",\n      \"instructions\": \"Would simply re-running this test, with no code changes, most likely make it pass?\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/systemone",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "systemone"
+              ]
+            },
+            "description": "Truth label: environment. A red test here = the local model disagrees with the human label."
+          }
+        },
+        {
+          "name": "T04 · profile (truth: test_bug)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const a = pm.response.json().answers;",
+                  "pm.test('Category matches truth (test_bug)', () => pm.expect(a.category.choice).to.eql('test_bug'));",
+                  "console.log(a.category.choice, a.category.probabilities, 'confidence', a.category.confidence, 'retry', a.retryWillPass.noul);",
+                  "pm.test('Fast enough (< 3 s)', () => pm.expect(pm.response.responseTime).to.be.below(3000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"{{model}}\",\n  \"state\": {\n    \"test\": \"profile › updates display name\",\n    \"error\": \"Error: locator('#btn-save-profile') resolved to 0 elements. Recent commit renamed button id to 'save-profile-btn'.\",\n    \"last10Runs\": \"PPPPPPPPPF\"\n  },\n  \"questions\": {\n    \"category\": {\n      \"type\": \"choice\",\n      \"instructions\": \"What is the most likely root cause of this test failure?\",\n      \"criteria\": {\n        \"product_bug\": \"The application under test behaves incorrectly (wrong result, server error, broken feature).\",\n        \"test_bug\": \"The test itself is wrong or outdated (stale locator, outdated expected value, spec changed).\",\n        \"environment\": \"Infrastructure problem outside the app and test (DB down, DNS, network, missing service).\",\n        \"flaky\": \"Timing or race condition; the same test intermittently passes and fails, often passes on retry.\"\n      }\n    },\n    \"releaseImpact\": {\n      \"type\": \"score\",\n      \"instructions\": \"If this is a real defect, how much does it impact the release?\",\n      \"criteria\": [\n        \"No user impact\",\n        \"Minor issue with an easy workaround\",\n        \"Important feature degraded\",\n        \"Critical user journey broken; blocks the release\"\n      ]\n    },\n    \"retryWillPass\": {\n      \"type\": \"noul\",\n      \"instructions\": \"Would simply re-running this test, with no code changes, most likely make it pass?\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/systemone",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "systemone"
+              ]
+            },
+            "description": "Truth label: test_bug. A red test here = the local model disagrees with the human label."
+          }
+        },
+        {
+          "name": "T05 · search (truth: product_bug)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const a = pm.response.json().answers;",
+                  "pm.test('Category matches truth (product_bug)', () => pm.expect(a.category.choice).to.eql('product_bug'));",
+                  "console.log(a.category.choice, a.category.probabilities, 'confidence', a.category.confidence, 'retry', a.retryWillPass.noul);",
+                  "pm.test('Fast enough (< 3 s)', () => pm.expect(pm.response.responseTime).to.be.below(3000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"{{model}}\",\n  \"state\": {\n    \"test\": \"search › returns results for \\\"laptop\\\"\",\n    \"error\": \"AssertionError: expected results.length > 0, received 0. API /search?q=laptop returned 500 Internal Server Error: NullReferenceException in RankingService.\",\n    \"last10Runs\": \"PPPPPPPPFF\"\n  },\n  \"questions\": {\n    \"category\": {\n      \"type\": \"choice\",\n      \"instructions\": \"What is the most likely root cause of this test failure?\",\n      \"criteria\": {\n        \"product_bug\": \"The application under test behaves incorrectly (wrong result, server error, broken feature).\",\n        \"test_bug\": \"The test itself is wrong or outdated (stale locator, outdated expected value, spec changed).\",\n        \"environment\": \"Infrastructure problem outside the app and test (DB down, DNS, network, missing service).\",\n        \"flaky\": \"Timing or race condition; the same test intermittently passes and fails, often passes on retry.\"\n      }\n    },\n    \"releaseImpact\": {\n      \"type\": \"score\",\n      \"instructions\": \"If this is a real defect, how much does it impact the release?\",\n      \"criteria\": [\n        \"No user impact\",\n        \"Minor issue with an easy workaround\",\n        \"Important feature degraded\",\n        \"Critical user journey broken; blocks the release\"\n      ]\n    },\n    \"retryWillPass\": {\n      \"type\": \"noul\",\n      \"instructions\": \"Would simply re-running this test, with no code changes, most likely make it pass?\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/systemone",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "systemone"
+              ]
+            },
+            "description": "Truth label: product_bug. A red test here = the local model disagrees with the human label."
+          }
+        },
+        {
+          "name": "T06 · payments (truth: environment)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const a = pm.response.json().answers;",
+                  "pm.test('Category matches truth (environment)', () => pm.expect(a.category.choice).to.eql('environment'));",
+                  "console.log(a.category.choice, a.category.probabilities, 'confidence', a.category.confidence, 'retry', a.retryWillPass.noul);",
+                  "pm.test('Fast enough (< 3 s)', () => pm.expect(pm.response.responseTime).to.be.below(3000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"{{model}}\",\n  \"state\": {\n    \"test\": \"payments › refunds partial amount\",\n    \"error\": \"Error: getaddrinfo ENOTFOUND payments-sandbox.internal — DNS lookup failed.\",\n    \"last10Runs\": \"PPPPPPPPPF\"\n  },\n  \"questions\": {\n    \"category\": {\n      \"type\": \"choice\",\n      \"instructions\": \"What is the most likely root cause of this test failure?\",\n      \"criteria\": {\n        \"product_bug\": \"The application under test behaves incorrectly (wrong result, server error, broken feature).\",\n        \"test_bug\": \"The test itself is wrong or outdated (stale locator, outdated expected value, spec changed).\",\n        \"environment\": \"Infrastructure problem outside the app and test (DB down, DNS, network, missing service).\",\n        \"flaky\": \"Timing or race condition; the same test intermittently passes and fails, often passes on retry.\"\n      }\n    },\n    \"releaseImpact\": {\n      \"type\": \"score\",\n      \"instructions\": \"If this is a real defect, how much does it impact the release?\",\n      \"criteria\": [\n        \"No user impact\",\n        \"Minor issue with an easy workaround\",\n        \"Important feature degraded\",\n        \"Critical user journey broken; blocks the release\"\n      ]\n    },\n    \"retryWillPass\": {\n      \"type\": \"noul\",\n      \"instructions\": \"Would simply re-running this test, with no code changes, most likely make it pass?\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/systemone",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "systemone"
+              ]
+            },
+            "description": "Truth label: environment. A red test here = the local model disagrees with the human label."
+          }
+        },
+        {
+          "name": "T07 · notifications (truth: flaky)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const a = pm.response.json().answers;",
+                  "pm.test('Category matches truth (flaky)', () => pm.expect(a.category.choice).to.eql('flaky'));",
+                  "console.log(a.category.choice, a.category.probabilities, 'confidence', a.category.confidence, 'retry', a.retryWillPass.noul);",
+                  "pm.test('Fast enough (< 3 s)', () => pm.expect(pm.response.responseTime).to.be.below(3000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"{{model}}\",\n  \"state\": {\n    \"test\": \"notifications › shows toast after save\",\n    \"error\": \"AssertionError: expected toast to be visible. Toast appeared 3.2s after save, assertion checked at 3.0s. Passed on retry.\",\n    \"last10Runs\": \"PPFPPPFPPF\"\n  },\n  \"questions\": {\n    \"category\": {\n      \"type\": \"choice\",\n      \"instructions\": \"What is the most likely root cause of this test failure?\",\n      \"criteria\": {\n        \"product_bug\": \"The application under test behaves incorrectly (wrong result, server error, broken feature).\",\n        \"test_bug\": \"The test itself is wrong or outdated (stale locator, outdated expected value, spec changed).\",\n        \"environment\": \"Infrastructure problem outside the app and test (DB down, DNS, network, missing service).\",\n        \"flaky\": \"Timing or race condition; the same test intermittently passes and fails, often passes on retry.\"\n      }\n    },\n    \"releaseImpact\": {\n      \"type\": \"score\",\n      \"instructions\": \"If this is a real defect, how much does it impact the release?\",\n      \"criteria\": [\n        \"No user impact\",\n        \"Minor issue with an easy workaround\",\n        \"Important feature degraded\",\n        \"Critical user journey broken; blocks the release\"\n      ]\n    },\n    \"retryWillPass\": {\n      \"type\": \"noul\",\n      \"instructions\": \"Would simply re-running this test, with no code changes, most likely make it pass?\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/systemone",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "systemone"
+              ]
+            },
+            "description": "Truth label: flaky. A red test here = the local model disagrees with the human label."
+          }
+        },
+        {
+          "name": "T08 · reports (truth: test_bug)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const a = pm.response.json().answers;",
+                  "pm.test('Category matches truth (test_bug)', () => pm.expect(a.category.choice).to.eql('test_bug'));",
+                  "console.log(a.category.choice, a.category.probabilities, 'confidence', a.category.confidence, 'retry', a.retryWillPass.noul);",
+                  "pm.test('Fast enough (< 3 s)', () => pm.expect(pm.response.responseTime).to.be.below(3000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"{{model}}\",\n  \"state\": {\n    \"test\": \"reports › exports CSV with 3 columns\",\n    \"error\": \"AssertionError: expected ['name','email','created'] but got ['name','email','created','plan']. Product spec v2.3 added 'plan' column to exports.\",\n    \"last10Runs\": \"PPPPPPPPPF\"\n  },\n  \"questions\": {\n    \"category\": {\n      \"type\": \"choice\",\n      \"instructions\": \"What is the most likely root cause of this test failure?\",\n      \"criteria\": {\n        \"product_bug\": \"The application under test behaves incorrectly (wrong result, server error, broken feature).\",\n        \"test_bug\": \"The test itself is wrong or outdated (stale locator, outdated expected value, spec changed).\",\n        \"environment\": \"Infrastructure problem outside the app and test (DB down, DNS, network, missing service).\",\n        \"flaky\": \"Timing or race condition; the same test intermittently passes and fails, often passes on retry.\"\n      }\n    },\n    \"releaseImpact\": {\n      \"type\": \"score\",\n      \"instructions\": \"If this is a real defect, how much does it impact the release?\",\n      \"criteria\": [\n        \"No user impact\",\n        \"Minor issue with an easy workaround\",\n        \"Important feature degraded\",\n        \"Critical user journey broken; blocks the release\"\n      ]\n    },\n    \"retryWillPass\": {\n      \"type\": \"noul\",\n      \"instructions\": \"Would simply re-running this test, with no code changes, most likely make it pass?\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/systemone",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "systemone"
+              ]
+            },
+            "description": "Truth label: test_bug. A red test here = the local model disagrees with the human label."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -27,6 +27,7 @@ Your Vercel team needs a **card on file**, even for free usage. Otherwise calls 
 | `npm run demo:guardrail` | 8 · Demo B | Part 1: should a test agent run this command? Part 2: is a RAG answer grounded (LLM-as-judge replacement) |
 | `npm test` | 8 · Bonus | Table-driven unit tests for the routing rules, plus the AI SDK mock model. No API calls |
 | `npm run demo:break` | 9 · Test the tester | Probes Jev's documented weak spots (math, dates, counting, double negation, prompt injection), then shows the fix |
+| `npm run demo:local` | Video 3 · Local Ollama | Runs the same triage workflow locally through Ollama's `/v1/systemone` endpoint. No API key or cloud service |
 
 Run everything in video order with one command:
 
@@ -41,6 +42,8 @@ src/lib/triage.ts      core triage logic: ask Jev (triageFailure), then decide i
 src/data/failures.ts   the 8 test failures, each with a known "truth" label
 src/lib/print.ts       tiny helpers: section title, API key check, percentage formatting
 test/triage.test.ts    table-driven + mock-model unit tests
+src/05-local-ollama.ts local Ollama version of the triage demo
+api/jev-ollama.postman_collection.json  Postman collection for the local Ollama API
 ```
 
 ## Naming note for the video

@@ -9,6 +9,7 @@
     "demo:triage": "tsx src/02-triage.ts",
     "demo:guardrail": "tsx src/03-guardrail.ts",
     "demo:break": "tsx src/04-break-it.ts",
+    "demo:local": "tsx src/05-local-ollama.ts",
     "demo:all": "npm run demo:hello && npm run demo:triage && npm run demo:guardrail && npm test && npm run demo:break",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
