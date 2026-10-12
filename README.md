@@ -28,12 +28,20 @@ Your Vercel team needs a **card on file**, even for free usage. Otherwise calls 
 | `npm test` | 8 · Bonus | Table-driven unit tests for the routing rules, plus the AI SDK mock model. No API calls |
 | `npm run demo:break` | 9 · Test the tester | Probes Jev's documented weak spots (math, dates, counting, double negation, prompt injection), then shows the fix |
 | `npm run demo:local` | Video 3 · Local Ollama | Runs the same triage workflow locally through Ollama's `/v1/systemone` endpoint. No API key or cloud service |
+| `npm run demo:decision` | Video 4 · Microsoft-Decision-1 | Same 8-test triage on Microsoft Foundry (`/providers/microsoft/v1/systemone`). Add `-- T05` for one test + raw JSON |
+| `npm run demo:gpt` | Video 4 · vs an LLM | Same triage on `gpt-5.2-chat` via the Responses API. Compare latency, tokens, cost, and parsed vs native output |
 
 Run everything in video order with one command:
 
 ```bash
 npm run demo:all
 ```
+
+### Foundry setup (demos 06 + 07)
+
+Fill `AZURE_FOUNDRY_*` in `.env` (see `.env.example`). If `AZURE_FOUNDRY_API_KEY` is empty, the demos
+use your Azure CLI login instead (`az login`; needs the *Cognitive Services User* role on the resource).
+`DECISION_DEPLOYMENT` must be your **deployment** name, not the model name.
 
 ## Files
 

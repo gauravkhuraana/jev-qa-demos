@@ -11,8 +11,8 @@ import { decideAction } from './lib/triage';
 import { pct, title } from './lib/print';
 
 const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434';
-//const MODEL = process.env.OLLAMA_MODEL ?? 'tev1:0.8b';
-const MODEL = process.env.OLLAMA_MODEL ?? 'nimble';
+const MODEL = process.env.OLLAMA_MODEL ?? 'tev1:0.8b';
+//const MODEL = process.env.OLLAMA_MODEL ?? 'nimble';
 
 // The same three questions as Part 2. One naming difference:
 // the AI SDK said type 'boolean'; Ollama uses TypeSafe's own name, 'noul'.

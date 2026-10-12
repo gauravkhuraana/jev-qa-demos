@@ -10,6 +10,9 @@
     "demo:guardrail": "tsx src/03-guardrail.ts",
     "demo:break": "tsx src/04-break-it.ts",
     "demo:local": "tsx src/05-local-ollama.ts",
+    "demo:decision": "tsx src/06-foundry-decision.ts",
+    "demo:gpt": "tsx src/07-foundry-gpt.ts",
+    "demo:compare": "npm run demo:decision && npm run demo:gpt",
     "demo:all": "npm run demo:hello && npm run demo:triage && npm run demo:guardrail && npm test && npm run demo:break",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

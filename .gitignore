@@ -18,6 +18,7 @@ out/
 # Local Video 3 presentation/supporting materials
 /api/ollama/
 /docs/video3-*
+/docs/video4-*
 
 # Test / coverage
 coverage/
